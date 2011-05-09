@@ -265,7 +265,7 @@ namespace JamaaTech.Smpp.Net.Client
         /// </summary>
         public void Shutdown()
         {
-            if (vStarted) { return; }
+            if (!vStarted) { return; }
             vStarted = false;
             StopTimer();
             CloseSession();
