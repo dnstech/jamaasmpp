@@ -1,4 +1,4 @@
-# jamaasmpp
+# Jamaa SMPP Client
 
 Forked from https://jamaasmpp.codeplex.com/
 
