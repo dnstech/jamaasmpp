@@ -24,7 +24,6 @@ namespace JamaaTech.Smpp.Net.Client
 {
     public class TextMessage : ShortMessage
     {
-        private string text = string.Empty;
         private DataCoding coding = DataCoding.SMSCDefault;
         private DataCodingLengthDefinition length = new DataCodingLengthDefinition { SizeWithoutUdh = 160, SizeWithUdh = 153 };
 
@@ -77,7 +76,7 @@ namespace JamaaTech.Smpp.Net.Client
                 sm.DestinationAddress.Address = DestinationAddress;
                 sm.RegisteredDelivery = RegisterDeliveryNotification ? RegisteredDelivery.DeliveryReceipt : RegisteredDelivery.None;
                 sm.DataCoding = coding;
-                sm.SetMessageBytes(SMPPEncodingUtil.GetBytesFromString(text, coding));
+                sm.SetMessageBytes(SMPPEncodingUtil.GetBytesFromString(Text, coding));
 
                 yield return sm;
             }
@@ -87,13 +86,13 @@ namespace JamaaTech.Smpp.Net.Client
         {
             List<string> list = new List<string>();
 
-            if(SMPPEncodingUtil.GetBytesFromString(text, coding).Length <= length.SizeWithoutUdh)
+            if(SMPPEncodingUtil.GetBytesFromString(Text, coding).Length <= length.SizeWithoutUdh)
             {
-                list.Add(text);
+                list.Add(Text);
             }
             else
             {
-                AddSubMessages(text, list);
+                AddSubMessages(Text, list);
             }
 
             return list;
@@ -124,7 +123,7 @@ namespace JamaaTech.Smpp.Net.Client
         {
             int max = 0;
             char character;
-            foreach(char c in text)
+            foreach(char c in Text)
             {
                 int code = (int)c;
                 if(code > max)
@@ -168,7 +167,7 @@ namespace JamaaTech.Smpp.Net.Client
 
         public override string ToString()
         {
-            return text == null ? "" : text;
+            return Text == null ? "" : Text;
         }
     }
 }
