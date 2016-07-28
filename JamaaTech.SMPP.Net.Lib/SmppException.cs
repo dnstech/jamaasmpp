@@ -51,5 +51,10 @@ namespace JamaaTech.Smpp.Net.Lib
             throw smppEx;
         }
         #endregion
+
+        public override string ToString()
+        {
+            return string.Format("{0}: {1}{2}{3}", ErrorCode, Message, Environment.NewLine, base.ToString());
+        }
     }
 }

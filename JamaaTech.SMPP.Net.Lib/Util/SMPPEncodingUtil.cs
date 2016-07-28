@@ -15,15 +15,12 @@
  ************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.Text;
-using JamaaTech.Smpp.Net.Lib;
 
 namespace JamaaTech.Smpp.Net.Lib.Util
 {
     public static class SMPPEncodingUtil
     {
-        #region Methods
         public static byte[] GetBytesFromInt(uint value)
         {
             byte[] result = new byte[4];
@@ -75,19 +72,27 @@ namespace JamaaTech.Smpp.Net.Lib.Util
 
         public static byte[] GetBytesFromCString(string cStr, DataCoding dataCoding)
         {
-            if (cStr == null) { throw new ArgumentNullException("cStr"); }
-            if (cStr.Length == 0) { return new byte[] { 0x00 }; }
+            if (cStr == null)
+            {
+                throw new ArgumentNullException("cStr");
+            }
+
+            if (cStr.Length == 0)
+            {
+                return new byte[] { 0x00 };
+            }
+
             byte[] bytes = null;
             switch (dataCoding)
             {
                 case DataCoding.ASCII:
-                    bytes = System.Text.Encoding.ASCII.GetBytes(cStr);
+                    bytes = Encoding.ASCII.GetBytes(cStr);
                     break;
                 case DataCoding.Latin1:
                     bytes = Latin1Encoding.GetBytes(cStr);
                     break;
                 case DataCoding.UCS2:
-                    bytes = System.Text.Encoding.Unicode.GetBytes(cStr);
+                    bytes = Encoding.BigEndianUnicode.GetBytes(cStr);
                     break;
                 case DataCoding.SMSCDefault:
                     bytes = SMSCDefaultEncoding.GetBytes(cStr);
@@ -95,6 +100,7 @@ namespace JamaaTech.Smpp.Net.Lib.Util
                 default:
                     throw new SmppException(SmppErrorCode.ESME_RUNKNOWNERR, "Unsupported encoding");
             }
+
             ByteBuffer buffer = new ByteBuffer(bytes, bytes.Length + 1);
             buffer.Append(new byte[] { 0x00 }); //Append a null charactor a the end
             return buffer.ToBytes();
@@ -107,15 +113,32 @@ namespace JamaaTech.Smpp.Net.Lib.Util
 
         public static string GetCStringFromBytes(byte[] data, DataCoding dataCoding)
         {
-            if (data == null) { throw new ArgumentNullException("data"); }
-            if (data.Length < 1) { throw new ArgumentException("Array cannot be empty","data"); }
-            if (data[data.Length - 1] != 0x00) { throw new ArgumentException("CString must be terminated with a null charactor","data"); }
-            if (data.Length == 1) { return ""; } //The string is empty if it contains a single null charactor
+            if (data == null)
+            {
+                throw new ArgumentNullException("data");
+            }
+
+            if (data.Length < 1)
+            {
+                throw new ArgumentException("Array cannot be empty","data");
+            }
+
+            if (data[data.Length - 1] != 0x00)
+            {
+                throw new ArgumentException("CString must be terminated with a null charactor","data");
+            }
+
+            //The string is empty if it contains a single null charactor
+            if (data.Length == 1)
+            {
+                return "";
+            }
+            
             string result = null;
             switch (dataCoding)
             {
                 case DataCoding.ASCII:
-                    result = System.Text.Encoding.ASCII.GetString(data);
+                    result = Encoding.ASCII.GetString(data);
                     break;
                 case DataCoding.Latin1:
                     result = Latin1Encoding.GetString(data);
@@ -124,12 +147,14 @@ namespace JamaaTech.Smpp.Net.Lib.Util
                     result = SMSCDefaultEncoding.GetString(data);
                     break;
                 case DataCoding.UCS2:
-                    result = System.Text.Encoding.Unicode.GetString(data);
+                    result = Encoding.BigEndianUnicode.GetString(data);
                     break;
                 default:
                     throw new SmppException(SmppErrorCode.ESME_RUNKNOWNERR, "Unsupported encoding");
             }
-            return result.Replace("\x00","");//Replace the terminating null charactor
+
+            //Replace the terminating null charactor
+            return result.Replace("\x00","");
         }
 
         public static byte[] GetBytesFromString(string cStr)
@@ -137,7 +162,7 @@ namespace JamaaTech.Smpp.Net.Lib.Util
             return GetBytesFromCString(cStr, DataCoding.ASCII);
         }
 
-        public static byte[] GetBytesFromString(string cStr,DataCoding dataCoding)
+        public static byte[] GetBytesFromString(string cStr, DataCoding dataCoding)
         {
             if (cStr == null) { throw new ArgumentNullException("cStr"); }
             if (cStr.Length == 0) { return new byte[] { 0x00 }; }
@@ -145,13 +170,13 @@ namespace JamaaTech.Smpp.Net.Lib.Util
             switch (dataCoding)
             {
                 case DataCoding.ASCII:
-                    bytes = System.Text.Encoding.ASCII.GetBytes(cStr);
+                    bytes = Encoding.ASCII.GetBytes(cStr);
                     break;
                 case DataCoding.Latin1:
                     bytes = Latin1Encoding.GetBytes(cStr);
                     break;
                 case DataCoding.UCS2:
-                    bytes = System.Text.Encoding.Unicode.GetBytes(cStr);
+                    bytes = Encoding.BigEndianUnicode.GetBytes(cStr);
                     break;
                 case DataCoding.SMSCDefault:
                     bytes = SMSCDefaultEncoding.GetBytes(cStr);
@@ -169,12 +194,16 @@ namespace JamaaTech.Smpp.Net.Lib.Util
 
         public static string GetStringFromBytes(byte[] data, DataCoding dataCoding)
         {
-            if (data == null) { throw new ArgumentNullException("data"); }
+            if (data == null)
+            {
+                throw new ArgumentNullException("data");
+            }
+
             string result = null;
             switch (dataCoding)
             {
                 case DataCoding.ASCII:
-                    result = System.Text.Encoding.ASCII.GetString(data);
+                    result = Encoding.ASCII.GetString(data);
                     break;
                 case DataCoding.Latin1:
                     result = Latin1Encoding.GetString(data);
@@ -183,17 +212,16 @@ namespace JamaaTech.Smpp.Net.Lib.Util
                     result = SMSCDefaultEncoding.GetString(data);
                     break;
                 case DataCoding.UCS2:
-                    result = System.Text.Encoding.Unicode.GetString(data);
+                    result = Encoding.BigEndianUnicode.GetString(data);
                     break;
                 default:
                     throw new SmppException(SmppErrorCode.ESME_RUNKNOWNERR, "Unsupported encoding");
             }
+
             //Since a CString may contain a null terminating charactor
             //Replace all occurences of null charactors
             return result.Replace("\u0000","");
 
         }
-        
-        #endregion
     }
 }

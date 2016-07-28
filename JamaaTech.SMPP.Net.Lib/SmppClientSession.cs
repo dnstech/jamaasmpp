@@ -159,7 +159,10 @@ namespace JamaaTech.Smpp.Net.Lib
             SendPduBase(pdu);
             if (pdu.HasResponse) 
             {
-                try { return vRespHandler.WaitResponse(pdu, timeout); }
+                try
+                {
+                    return vRespHandler.WaitResponse(pdu, timeout);
+                }
                 catch (SmppResponseTimedOutException)
                 {
                     if (vTraceSwitch.TraceWarning)
@@ -172,10 +175,20 @@ namespace JamaaTech.Smpp.Net.Lib
 
         private void SendPduBase(PDU pdu)
         {
-            if (pdu == null) { throw new ArgumentNullException("pdu"); }
+            if (pdu == null)
+            {
+                throw new ArgumentNullException("pdu");
+            }
+
             if (!(CheckState(pdu) && (pdu.AllowedSource & SmppEntityType.ESME) == SmppEntityType.ESME))
-            { throw new SmppException(SmppErrorCode.ESME_RINVBNDSTS, "Incorrect bind status for given command"); }
-            try { vTrans.Send(pdu); }
+            {
+                throw new SmppException(SmppErrorCode.ESME_RINVBNDSTS, "Incorrect bind status for given command");
+            }
+
+            try
+            {
+                vTrans.Send(pdu);
+            }
             catch (Exception ex)
             {
                 if (vTraceSwitch.TraceInfo)
