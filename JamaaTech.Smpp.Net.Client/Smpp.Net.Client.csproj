@@ -43,9 +43,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ConnectionStateChangedEventArgs.cs" />
+    <Compile Include="IShortMessage.cs" />
+    <Compile Include="ISmppClient.cs" />
     <Compile Include="MessageEventArgs.cs" />
     <Compile Include="MessageFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RecievedShortMessage.cs" />
     <Compile Include="SendMessageCallBack.cs" />
     <Compile Include="ShortMessage.cs" />
     <Compile Include="SmppClient.cs" />

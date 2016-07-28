@@ -15,7 +15,6 @@
  ************************************************************************/
 
 using System;
-using System.Text;
 using System.Collections.Generic;
 using JamaaTech.Smpp.Net.Lib.Protocol;
 using JamaaTech.Smpp.Net.Lib;
@@ -25,84 +24,151 @@ namespace JamaaTech.Smpp.Net.Client
 {
     public class TextMessage : ShortMessage
     {
-        #region Variables
-        private string vText;
-        #endregion
+        private string text = string.Empty;
+        private DataCoding coding = DataCoding.SMSCDefault;
+        private DataCodingLengthDefinition length = new DataCodingLengthDefinition { SizeWithoutUdh = 160, SizeWithUdh = 153 };
 
-        #region Constuctors
-        /// <summary>
-        /// Initializes a new instance of <see cref="TextMessage"/>
-        /// </summary>
-        public TextMessage()
-            : base()
+        public TextMessage(string sourceAddress, string destinatinAddress, string text, bool deliveryNotification = false)
+            : base(sourceAddress, destinatinAddress, text, deliveryNotification)
         {
-            vText = "";
         }
 
-        internal TextMessage(int segmentId, int messageCount, int sequenceNumber)
-            :base(segmentId,messageCount,sequenceNumber)
-        {
-            vText = "";
-        }
-        #endregion
 
-        #region Properties
-        /// <summary>
-        /// Gets or sets a <see cref="System.String"/> value representing the text content of the message
-        /// </summary>
-        public string Text
+        internal IEnumerable<SendSmPDU> GetMessagePDUs(DataCoding defaultEncoding)
         {
-            get { return vText; }
-            set { vText = value; }
+            return GetPDUs(defaultEncoding);
         }
-        #endregion
 
-        #region Methods
-        protected override IEnumerable<SendSmPDU> GetPDUs(DataCoding defaultEncoding)
+        protected IEnumerable<SendSmPDU> GetPDUs(DataCoding defaultEncoding)
         {
-            //This smpp implementation does not support sending concatenated messages,
-            //however, concatenated messages are supported on the receiving side.
-            int maxLength = GetMaxMessageLength(defaultEncoding, false);
-            byte[] bytes = SMPPEncodingUtil.GetBytesFromString(vText, defaultEncoding);
-            //Check message size
-            if(bytes.Length > maxLength)
+            coding = SniffEncoding();
+            length = EncodingLenghts[coding];
+
+            SegmentID = new Random().Next(1000, 9999); // generate random ID
+
+            IList<string> subMessages = GetSubMessages();
+            MessageCount = subMessages.Count;
+
+            if (MessageCount > 1)
             {
-                throw new InvalidOperationException(string.Format(
-                    "Encoding '{0}' does not support messages of length greater than '{1}' charactors",
-                    defaultEncoding, maxLength));
+                for (int sequence = 1; sequence <= MessageCount; sequence++)
+                {
+                    PDUHeader header = new PDUHeader(CommandType.SubmitSm, (uint)sequence);
+                    var udh = new Udh(SegmentID, MessageCount, sequence);
+                    SubmitSm sm = new SubmitSm(header);
+                    sm.SourceAddress.Address = SourceAddress;
+                    sm.DestinationAddress.Address = DestinationAddress;
+                    sm.RegisteredDelivery = RegisterDeliveryNotification ? RegisteredDelivery.DeliveryReceipt : RegisteredDelivery.None;
+                    sm.DataCoding = coding;
+
+                    ByteBuffer buffer = new ByteBuffer();
+                    buffer.Append(udh.GetBytes());
+                    buffer.Append(SMPPEncodingUtil.GetBytesFromString(subMessages[sequence - 1], coding));
+
+                    sm.SetMessageBytes(buffer.ToBytes());
+                    if (udh != null) { sm.EsmClass = sm.EsmClass | EsmClass.UdhiIndicator; }
+                    yield return sm;
+                }
             }
-            SubmitSm sm = new SubmitSm();
-            sm.SetMessageBytes(bytes);
-            sm.SourceAddress.Address = vSourceAddress;
-            sm.DestinationAddress.Address = vDestinatinoAddress;
-            sm.DataCoding = defaultEncoding;
-            if (vRegisterDeliveryNotification) { sm.RegisteredDelivery = RegisteredDelivery.DeliveryReceipt; }
-            yield return sm;
-        }
-
-        private static int GetMaxMessageLength(DataCoding encoding, bool includeUdh)
-        {
-            switch (encoding)
+            else
             {
-                case DataCoding.SMSCDefault:
-                    return includeUdh ? 153 : 160;
-                case DataCoding.Latin1:
-                    return includeUdh ? 134 : 140;
-                case DataCoding.ASCII:
-                    return includeUdh ? 153 : 160;
-                case DataCoding.UCS2:
-                    return includeUdh ? 67 : 70;
-                default:
-                    throw new InvalidOperationException("Invalid or unsuported encoding for text message ");
+                SubmitSm sm = new SubmitSm();
+                sm.SourceAddress.Address = SourceAddress;
+                sm.DestinationAddress.Address = DestinationAddress;
+                sm.RegisteredDelivery = RegisterDeliveryNotification ? RegisteredDelivery.DeliveryReceipt : RegisteredDelivery.None;
+                sm.DataCoding = coding;
+                sm.SetMessageBytes(SMPPEncodingUtil.GetBytesFromString(text, coding));
+
+                yield return sm;
             }
         }
-        #endregion
 
-        #region Overriden System.Object Members
+        private IList<string> GetSubMessages()
+        {
+            List<string> list = new List<string>();
+
+            if(SMPPEncodingUtil.GetBytesFromString(text, coding).Length <= length.SizeWithoutUdh)
+            {
+                list.Add(text);
+            }
+            else
+            {
+                AddSubMessages(text, list);
+            }
+
+            return list;
+        }
+
+        private void AddSubMessages(string remaining, IList<string> list)
+        {
+            if(SMPPEncodingUtil.GetBytesFromString(remaining, coding).Length <= length.SizeWithUdh)
+            {
+                list.Add(remaining);
+            }
+            else
+            {
+                int max = Math.Min(remaining.Length, length.SizeWithUdh);
+                string partOfMessage = remaining.Substring(0, max);
+                while (SMPPEncodingUtil.GetBytesFromString(partOfMessage, coding).Length > length.SizeWithUdh)
+                {
+                    max = max - 1;
+                    partOfMessage = remaining.Substring(0, max);
+                }
+                list.Add(partOfMessage);
+                remaining = remaining.Remove(0, max);
+                AddSubMessages(remaining, list);
+            }
+        }
+
+        private DataCoding SniffEncoding()
+        {
+            int max = 0;
+            char character;
+            foreach(char c in text)
+            {
+                int code = (int)c;
+                if(code > max)
+                {
+                    max = code;
+                    character = c;
+                }
+            }
+
+            DataCoding messageEncoding = DataCoding.SMSCDefault;
+
+            if(max <= 127)
+            {
+                messageEncoding = DataCoding.ASCII;
+            }
+            else if(max <= 255)
+            {
+                messageEncoding = DataCoding.Latin1;
+            }
+            else
+            {
+                messageEncoding = DataCoding.UCS2;
+            }
+
+            return messageEncoding;
+        }
+
+        private class DataCodingLengthDefinition
+        {
+            public int SizeWithoutUdh { get; set; }
+            public int SizeWithUdh { get; set; }
+        }
+
+        private static Dictionary<DataCoding, DataCodingLengthDefinition> EncodingLenghts = new Dictionary<DataCoding, DataCodingLengthDefinition>
+        {
+            { DataCoding.SMSCDefault, new DataCodingLengthDefinition { SizeWithoutUdh = 160, SizeWithUdh = 153 } },
+            { DataCoding.Latin1, new DataCodingLengthDefinition { SizeWithoutUdh = 140, SizeWithUdh = 134 } },
+            { DataCoding.ASCII, new DataCodingLengthDefinition { SizeWithoutUdh = 160, SizeWithUdh = 153 } },
+            { DataCoding.UCS2, new DataCodingLengthDefinition { SizeWithoutUdh = 70, SizeWithUdh = 67 } },
+        };
+
         public override string ToString()
         {
-            return vText == null ? "" : vText;
+            return text == null ? "" : text;
         }
-        #endregion
     }
 }

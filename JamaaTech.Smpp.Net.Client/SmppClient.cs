@@ -23,309 +23,211 @@ using JamaaTech.Smpp.Net.Lib.Util;
 
 namespace JamaaTech.Smpp.Net.Client
 {
-    public class SmppClient : IDisposable
+    public class SmppClient : ISmppClient
     {
-        #region Variables
-        private SmppConnectionProperties vProperties;
-        private SmppClientSession vTrans;
-        private SmppClientSession vRecv;
-        private Exception vLastException;
-        private SmppConnectionState vState;
-        private object vConnSyncRoot;
-        private System.Threading.Timer vTimer;
-        private int vTimeOut;
-        private int vAutoReconnectDelay;
-        private string vName;
-        private int vKeepAliveInterval;
-        private SendMessageCallBack vSendMessageCallBack;
-        private bool vStarted;
-        //--
-        private static TraceSwitch vTraceSwitch = new TraceSwitch("SmppClientSwitch", "SmppClient trace switch");
-        #endregion
+        private const int MinimumReconnectInterval = 5000;
+        private SmppClientSession transieverSession;
+        private SmppClientSession recieverSession;
+        private Exception lastException;
+        private object connectionSyncRoot;
+        private Timer timer;
+        private int timeout;
+        private int autoReconnectDelay;
+        private SendMessageCallBack sendMessageCallback;
+        private bool started;
+        private static TraceSwitch traceSwitch = new TraceSwitch("SmppClientSwitch", "SmppClient trace switch");
 
-        #region Events
-        /// <summary>
-        /// Occurs when a message is received
-        /// </summary>
         public event EventHandler<MessageEventArgs> MessageReceived;
 
-        /// <summary>
-        /// Occurs when a message delivery notification is received
-        /// </summary>
         public event EventHandler<MessageEventArgs> MessageDelivered;
 
-        /// <summary>
-        /// Occurs when connection state changes
-        /// </summary>
         public event EventHandler<ConnectionStateChangedEventArgs> ConnectionStateChanged;
 
-        /// <summary>
-        /// Occurs when a message is successfully sent
-        /// </summary>
         public event EventHandler<MessageEventArgs> MessageSent;
 
-        /// <summary>
-        /// Occurs when <see cref="SmppClient"/> is started or shut down
-        /// </summary>
         public event EventHandler<StateChangedEventArgs> StateChanged;
-        #endregion
 
-        #region Constructors
-        public SmppClient()
+        public SmppClient(SmppConnectionProperties connectionProperties)
         {
-            vProperties = new SmppConnectionProperties();
-            vConnSyncRoot = new object();
-            vAutoReconnectDelay = 10000;
-            vTimeOut = 5000;
-            //--
-            vTimer = new System.Threading.Timer(AutoReconnectTimerEventHandler,null,Timeout.Infinite, vAutoReconnectDelay);
-            //--
-            vName = "";
-            vState = SmppConnectionState.Closed;
-            vKeepAliveInterval = 30000;
-            //--
-            vSendMessageCallBack += SendMessage;
+            if(connectionProperties == null)
+            {
+                throw new ArgumentNullException(nameof(connectionProperties), "Connection properties must be set");
+            }
+
+            ConnectionProperties = connectionProperties;
+            connectionSyncRoot = new object();
+            autoReconnectDelay = 10000;
+            timeout = 5000;
+            ConnectionState = SmppConnectionState.Closed;
+            KeepAliveInterval = 30000;
+
+            timer = new Timer(AutoReconnectTimerEventHandler, null, Timeout.Infinite, AutoReconnectDelay);
+            sendMessageCallback += SendMessage;
         }
-
-        #endregion
-
-        #region Properties
-        /// <summary>
-        /// Gets or sets a value indicating the time in miliseconds to wait before attemping to reconnect after a connection is lost
-        /// </summary>
+        
         public int AutoReconnectDelay
         {
-            get { return vAutoReconnectDelay; }
-            set { vAutoReconnectDelay = value; }
-        }
-
-        /// <summary>
-        /// Indicates the current state of <see cref="SmppClient"/>
-        /// </summary>
-        public SmppConnectionState ConnectionState
-        {
-            get { return vState; }
-        }
-
-        /// <summary>
-        /// Gets or sets a value that indicates the time in miliseconds in which Enquire Link PDUs are periodically sent
-        /// </summary>
-        public int KeepAliveInterval
-        {
-            get { return vKeepAliveInterval; }
-            set { vKeepAliveInterval = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets a value that specifies the name for this <see cref="SmppClient"/>
-        /// </summary>
-        public string Name
-        {
-            get { return vName; }
-            set { vName = value; }
-        }
-
-        /// <summary>
-        /// Gets an instance of <see cref="SmppConnectionProperties"/> that represents connection properties for this <see cref="SmppClient"/>
-        /// </summary>
-        public SmppConnectionProperties Properties
-        {
-            get { return vProperties; }
-        }
-
-        /// <summary>
-        /// Gets or sets a value that speficies the amount of time after which a synchronous <see cref="SmppClient.SendMessage"/> call will timeout
-        /// </summary>
-        public int ConnectionTimeout
-        {
-            get { return vTimeOut; }
-            set { vTimeOut = value; }
-        }
-
-        /// <summary>
-        /// Gets a <see cref="System.Boolean"/> value indicating if an instance of <see cref="SmppClient"/> is started
-        /// </summary>
-        public bool Started
-        {
-            get { return vStarted; }
-        }
-        #endregion
-
-        #region Methods
-        #region Interface Methods
-        /// <summary>
-        /// Sends message to a remote SMMP server
-        /// </summary>
-        /// <param name="message">A message to send</param>
-        /// <param name="timeOut">A value in miliseconds after which the send operation times out</param>
-        public void SendMessage(ShortMessage message, int timeOut)
-        {
-            if (message == null) { throw new ArgumentNullException("message"); }
-
-            //Check if connection is open
-            if (vState != SmppConnectionState.Connected)
-            { throw new SmppClientException("Sending message operation failed because the SmppClient is not connected"); }
-
-            foreach (SendSmPDU pdu in message.GetMessagePDUs(vProperties.DefaultEncoding))
+            get { return autoReconnectDelay; }
+            set
             {
-                ResponsePDU resp = vTrans.SendPdu(pdu, timeOut);
-                if (resp.Header.ErrorCode != SmppErrorCode.ESME_ROK)
-                { throw new SmppException(resp.Header.ErrorCode); }
+                timer.Change(Timeout.Infinite, autoReconnectDelay);
+                autoReconnectDelay = value;
+            }
+        }
+
+        public SmppConnectionState ConnectionState { get; private set; }
+
+        public int KeepAliveInterval { get; set; }
+
+        public SmppConnectionProperties ConnectionProperties { get; private set; }
+
+        public int ConnectionTimeout { get; set; }
+
+        public bool Started { get; private set; }
+
+        public void SendMessage(TextMessage message, int timeOut)
+        {
+            if (message == null)
+            {
+                throw new ArgumentNullException("message");
+            }
+
+            if (ConnectionState != SmppConnectionState.Connected)
+            {
+                throw new SmppClientException("Sending message operation failed because the SmppClient is not connected");
+            }
+
+            foreach (SendSmPDU pdu in message.GetMessagePDUs(ConnectionProperties.DefaultEncoding))
+            {
+                ResponsePDU response = transieverSession.SendPdu(pdu, timeOut);
+                if (response.Header.ErrorCode != SmppErrorCode.ESME_ROK)
+                {
+                    throw new SmppException(response.Header.ErrorCode);
+                }
+
                 RaiseMessageSentEvent(message);
             }
         }
 
-        /// <summary>
-        /// Sends message to a remote SMPP server
-        /// </summary>
-        /// <param name="message">A message to send</param>
-        public void SendMessage(ShortMessage message)
+        public void SendMessage(TextMessage message)
         {
-            SendMessage(message, vTrans.DefaultResponseTimeout);
+            SendMessage(message, transieverSession.DefaultResponseTimeout);
         }
 
-        /// <summary>
-        /// Sends message asynchronously to a remote SMPP server
-        /// </summary>
-        /// <param name="message">A message to send</param>
-        /// <param name="timeout">A value in miliseconds after which the send operation times out</param>
-        /// <param name="callback">An <see cref="AsyncCallback"/> delegate</param>
-        /// <param name="state">An object that contains state information for this request</param>
-        /// <returns>An <see cref="IAsyncResult"/> that references the asynchronous send message operation</returns>
-        public IAsyncResult BeginSendMessage(ShortMessage message, int timeout, AsyncCallback callback, object state)
+        public IAsyncResult BeginSendMessage(TextMessage message, int timeout, AsyncCallback callback, object state)
         {
-            return vSendMessageCallBack.BeginInvoke(message, timeout, callback, state);
+            return sendMessageCallback.BeginInvoke(message, timeout, callback, state);
         }
 
-        /// <summary>
-        /// Sends message asynchronously to a remote SMPP server
-        /// </summary>
-        /// <param name="message">A message to send</param>
-        /// <param name="callback">An <see cref="AsyncCallback"/> delegate</param>
-        /// <param name="state">An object that contains state information for this request</param>
-        /// <returns>An <see cref="IAsyncResult"/> that references the asynchronous send message operation</returns>
-        public IAsyncResult BeginSendMessage(ShortMessage message, AsyncCallback callback, object state)
+        public IAsyncResult BeginSendMessage(TextMessage message, AsyncCallback callback, object state)
         {
             int timeout = 0;
-            timeout = vTrans.DefaultResponseTimeout;
+            timeout = transieverSession.DefaultResponseTimeout;
             return BeginSendMessage(message, timeout, callback, state);
         }
 
-        /// <summary>
-        /// Ends a pending asynchronous send message operation
-        /// </summary>
-        /// <param name="result">An <see cref="IAsyncResult"/> that stores state information for this asynchronous operation</param>
         public void EndSendMessage(IAsyncResult result)
         {
-            vSendMessageCallBack.EndInvoke(result);
+            sendMessageCallback.EndInvoke(result);
         }
-
-        /// <summary>
-        /// Starts <see cref="SmppClient"/> and immediately connects to a remote SMPP server
-        /// </summary>
+       
         public void Start()
         {
-
-            vStarted = true;
-            vTimer.Change(0, vAutoReconnectDelay);
-            RaiseStateChangedEvent(true);
+            Start(0);
         }
 
-        /// <summary>
-        /// Starts <see cref="SmppClient"/> and waits for a specified amount of time before establishing connection
-        /// </summary>
-        /// <param name="connectDelay">A value in miliseconds to wait before establishing connection</param>
         public void Start(int connectDelay)
         {
-            if (connectDelay < 0) { connectDelay = 0; }
-            vStarted = true;
-            vTimer.Change(connectDelay, vAutoReconnectDelay);
-            RaiseStateChangedEvent(true);
+            if (connectDelay < 0)
+            {
+                connectDelay = 0;
+            }
+
+            started = true;
+            timer.Change(connectDelay, AutoReconnectDelay);
+            RaiseStateChangedEvent(started);
         }
 
-        /// <summary>
-        /// Immediately attempts to reestablish a lost connection without waiting for <see cref="SmppClient"/> to automatically reconnect
-        /// </summary>
-        public void ForceConnect()
-        {
-            Open(vTimeOut);
-        }
-
-        /// <summary>
-        /// Immediately attempts to reestablish a lost connection without waiting for <see cref="SmppClient"/> to automatically reconnect
-        /// </summary>
-        /// <param name="timeout">A time in miliseconds after which a connection operation times out</param>
-        public void ForceConnect(int timeout)
+        public void Connect()
         {
             Open(timeout);
         }
 
-        /// <summary>
-        /// Shuts down <see cref="SmppClient"/>
-        /// </summary>
-        public void Shutdown()
+        public void Connect(int timeout)
         {
-            if (!vStarted) { return; }
-            vStarted = false;
+            Open(timeout);
+        }
+        
+        public void Stop()
+        {
+            if (!started) { return; }
+            started = false;
             StopTimer();
-            CloseSession();
-            RaiseStateChangedEvent(false);
+            RaiseStateChangedEvent(started);
         }
 
-        /// <summary>
-        /// Restarts <see cref="SmppClient"/>
-        /// </summary>
+        public void Disconnect()
+        {
+            CloseSession();
+        }
+
         public void Restart()
         {
-            Shutdown();
+            Stop();
             Start();
         }
-        #endregion
 
-        #region Helper Methods
         private void Open(int timeOut)
         {
             try
             {
-                if (Monitor.TryEnter(vConnSyncRoot))
+                if (Monitor.TryEnter(connectionSyncRoot))
                 {
-                    //No thread is in a connecting or reconnecting state
-                    if (vState != SmppConnectionState.Closed)
+                    if (ConnectionState != SmppConnectionState.Closed)
                     {
-                        vLastException = new InvalidOperationException("You cannot open while the instance is already connected");
-                        throw vLastException;
+                        lastException = new InvalidOperationException("You cannot open while the instance is already connected");
+                        throw lastException;
                     }
-                    //
+
                     SessionBindInfo bindInfo = null;
                     bool useSepConn = false;
-                    lock (vProperties.SyncRoot)
+                    lock (ConnectionProperties.SyncRoot)
                     {
-                        bindInfo = vProperties.GetBindInfo();
-                        useSepConn = vProperties.InterfaceVersion == InterfaceVersion.v33;
+                        bindInfo = ConnectionProperties.GetBindInfo();
+                        useSepConn = ConnectionProperties.InterfaceVersion == InterfaceVersion.v33;
                     }
-                    try { OpenSession(bindInfo, useSepConn, timeOut); }
-                    catch (Exception ex) { vLastException = ex; throw; }
-                    vLastException = null;
+
+                    try
+                    {
+                        OpenSession(bindInfo, useSepConn, timeOut);
+                    }
+                    catch (Exception ex)
+                    {
+                        lastException = ex;
+                        throw;
+                    }
+                    lastException = null;
                 }
                 else
                 {
                     //Another thread is already in either a connecting or reconnecting state
                     //Wait until the thread finishes
-                    Monitor.Enter(vConnSyncRoot);
+                    Monitor.Enter(connectionSyncRoot);
                     //Now, the thread has finished connecting,
                     //Check on the result if the thread encountered any problem during connection
-                    if (vLastException != null) { throw vLastException; }
+                    if (lastException != null) { throw lastException; }
                 }
             }
             finally
             {
-                Monitor.Exit(vConnSyncRoot);
+                Monitor.Exit(connectionSyncRoot);
             }
         }
 
         private void OpenSession(SessionBindInfo bindInfo, bool useSeparateConnections, int timeOut)
         {
             ChangeState(SmppConnectionState.Connecting);
+
             if (useSeparateConnections)
             {
                 //Create two separate sessions for sending and receiving
@@ -333,8 +235,8 @@ namespace JamaaTech.Smpp.Net.Client
                 {
                     bindInfo.AllowReceive = true;
                     bindInfo.AllowTransmit = false;
-                    vRecv = SmppClientSession.Bind(bindInfo, timeOut);
-                    InitializeSession(vRecv);
+                    recieverSession = SmppClientSession.Bind(bindInfo, timeOut);
+                    InitializeSession(recieverSession);
                 }
                 catch
                 {
@@ -348,14 +250,14 @@ namespace JamaaTech.Smpp.Net.Client
                 {
                     bindInfo.AllowReceive = false;
                     bindInfo.AllowTransmit = true;
-                    vTrans = SmppClientSession.Bind(bindInfo, timeOut);
-                    InitializeSession(vTrans);
+                    transieverSession = SmppClientSession.Bind(bindInfo, timeOut);
+                    InitializeSession(transieverSession);
                 }
                 catch
                 {
-                    try { vRecv.EndSession(); }
+                    try { recieverSession.EndSession(); }
                     catch {/*Silent catch*/}
-                    vRecv = null;
+                    recieverSession = null;
                     ChangeState(SmppConnectionState.Closed);
                     //Start reconnect timer
                     StartTimer();
@@ -371,8 +273,8 @@ namespace JamaaTech.Smpp.Net.Client
                 try
                 {
                     SmppClientSession session = SmppClientSession.Bind(bindInfo, timeOut);
-                    vTrans = session;
-                    vRecv = session;
+                    transieverSession = session;
+                    recieverSession = session;
                     InitializeSession(session);
                     ChangeState(SmppConnectionState.Connected);
                 }
@@ -404,22 +306,29 @@ namespace JamaaTech.Smpp.Net.Client
 
         private void CloseSession()
         {
-            SmppConnectionState oldState = SmppConnectionState.Closed;
+            if (ConnectionState == SmppConnectionState.Closed)
+            {
+                return;
+            }
 
-            oldState = vState;
-            if (vState == SmppConnectionState.Closed) { return; }
-            vState = SmppConnectionState.Closed;
+            ChangeState(SmppConnectionState.Closed);
 
-            RaiseConnectionStateChangeEvent(SmppConnectionState.Closed, oldState);
-            if (vTrans != null) { vTrans.EndSession(); }
-            if (vRecv != null) { vRecv.EndSession(); }
-            vTrans = null;
-            vRecv = null;
+            if (transieverSession != null)
+            {
+                transieverSession.EndSession();
+                transieverSession = null;
+            }
+
+            if (recieverSession != null)
+            {
+                recieverSession.EndSession();
+                recieverSession = null;
+            }
         }
 
         private void InitializeSession(SmppClientSession session)
         {
-            session.EnquireLinkInterval = vKeepAliveInterval;
+            session.EnquireLinkInterval = KeepAliveInterval;
             session.PduReceived += PduReceivedEventHander;
             session.SessionClosed += SessionClosedEventHandler;
         }
@@ -427,39 +336,61 @@ namespace JamaaTech.Smpp.Net.Client
         private void ChangeState(SmppConnectionState newState)
         {
             SmppConnectionState oldState = SmppConnectionState.Closed;
-            oldState = vState;
-            vState = newState;
-            vProperties.SmscID = newState == SmppConnectionState.Connected ? vTrans.SmscID : "";
+            oldState = ConnectionState;
+            ConnectionState = newState;
+            ConnectionProperties.SmscID = newState == SmppConnectionState.Connected ? transieverSession.SmscID : "";
             RaiseConnectionStateChangeEvent(newState, oldState);
         }
 
         private void RaiseMessageReceivedEvent(ShortMessage message)
         {
-            if (MessageReceived != null) { MessageReceived(this, new MessageEventArgs(message)); }
+            if (MessageReceived != null)
+            {
+                MessageReceived(this, new MessageEventArgs(message));
+            }
         }
 
         private void RaiseMessageDeliveredEvent(ShortMessage message)
         {
-            if (MessageDelivered != null) { MessageDelivered(this, new MessageEventArgs(message)); }
+            if (MessageDelivered != null)
+            {
+                MessageDelivered(this, new MessageEventArgs(message));
+            }
         }
 
         private void RaiseMessageSentEvent(ShortMessage message)
         {
-            if (MessageSent != null) { MessageSent(this,new MessageEventArgs(message)); }
+            if (MessageSent != null)
+            {
+                MessageSent(this,new MessageEventArgs(message));
+            }
         }
 
         private void RaiseConnectionStateChangeEvent(SmppConnectionState newState, SmppConnectionState oldState)
         {
-            if (ConnectionStateChanged == null) { return; }
-            ConnectionStateChangedEventArgs e = new ConnectionStateChangedEventArgs(newState,oldState, vAutoReconnectDelay);
+            if (ConnectionStateChanged == null)
+            {
+                return;
+            }
+
+            ConnectionStateChangedEventArgs e = new ConnectionStateChangedEventArgs(newState,oldState, AutoReconnectDelay);
             ConnectionStateChanged(this, e);
-            if (e.ReconnectInteval < 5000) { e.ReconnectInteval = 5000; }
-            Interlocked.Exchange(ref vAutoReconnectDelay, e.ReconnectInteval);
+
+            if (e.ReconnectInteval < MinimumReconnectInterval)
+            {
+                e.ReconnectInteval = MinimumReconnectInterval;
+            }
+
+            Interlocked.Exchange(ref autoReconnectDelay, e.ReconnectInteval);
         }
 
         private void RaiseStateChangedEvent(bool started)
         {
-            if (StateChanged == null) { return; }
+            if (StateChanged == null)
+            {
+                return;
+            }
+
             StateChangedEventArgs e = new StateChangedEventArgs(started);
             StateChanged(this, e);
         }
@@ -468,16 +399,25 @@ namespace JamaaTech.Smpp.Net.Client
         {
             //This handler is interested in SingleDestinationPDU only
             SingleDestinationPDU pdu = e.Request as SingleDestinationPDU;
-            if (pdu == null) { return; }
+            if (pdu == null)
+            {
+                return;
+            }
+
             ShortMessage message = null;
-            try { message = MessageFactory.CreateMessage(pdu); }
+            try
+            {
+                message = MessageFactory.CreateMessage(pdu);
+            }
             catch (SmppException smppEx)
             {
-                if (vTraceSwitch.TraceError)
+                if (traceSwitch.TraceError)
                 {
-                    Trace.WriteLine(string.Format(
-                        "200019:SMPP message decoding failure - {0} - {1} {2};",
-                        smppEx.ErrorCode, new ByteBuffer(pdu.GetBytes()).DumpString(), smppEx.Message));
+                    string traceMessage = string.Format("200019:SMPP message decoding failure - {0} - {1} {2};",
+                                                        smppEx.ErrorCode, 
+                                                        new ByteBuffer(pdu.GetBytes()).DumpString(), 
+                                                        smppEx.Message);
+                    Trace.WriteLine(traceMessage);
                 }
                 //Notify the SMSC that we encountered an error while processing the message
                 e.Response = pdu.CreateDefaultResponce();
@@ -486,30 +426,36 @@ namespace JamaaTech.Smpp.Net.Client
             }
             catch(Exception ex)
             {
-                if (vTraceSwitch.TraceError)
+                if (traceSwitch.TraceError)
                 {
-                    Trace.WriteLine(string.Format(
-                        "200019:SMPP message decoding failure - {0} {1};",
-                        new ByteBuffer(pdu.GetBytes()).DumpString(), ex.Message));
+                    string traceMessage = string.Format("200019:SMPP message decoding failure - {0} {1};",
+                                                        new ByteBuffer(pdu.GetBytes()).DumpString(), 
+                                                        ex.Message);
+                    Trace.WriteLine(traceMessage);
                 }
                 //Let the receiver know that this message was rejected
                 e.Response = pdu.CreateDefaultResponce();
                 e.Response.Header.ErrorCode = SmppErrorCode.ESME_RX_P_APPN; //ESME Receiver Reject Message
                 return;
             }
+
             //If we have just a normal message
             if ((((byte)pdu.EsmClass) | 0xc3) == 0xc3)
-            { RaiseMessageReceivedEvent(message); }
+            {
+                RaiseMessageReceivedEvent(message);
+            }
+
             //Or if we have received a delivery receipt
             else if ((pdu.EsmClass & EsmClass.DeliveryReceipt) == EsmClass.DeliveryReceipt)
-            { RaiseMessageDeliveredEvent(message); }
+            {
+                RaiseMessageDeliveredEvent(message);
+            }
         }
 
         private void SessionClosedEventHandler(object sender, SmppSessionClosedEventArgs e)
         {
             if (e.Reason != SmppSessionCloseReason.EndSessionCalled)
             {
-                //Start timer 
                 StartTimer();
             }
             CloseSession();
@@ -517,34 +463,36 @@ namespace JamaaTech.Smpp.Net.Client
 
         private void StartTimer()
         {
-            vTimer.Change(vAutoReconnectDelay, vAutoReconnectDelay);
+            timer.Change(AutoReconnectDelay, AutoReconnectDelay);
         }
 
         private void StopTimer()
         {
-            vTimer.Change(Timeout.Infinite, vAutoReconnectDelay);
+            timer.Change(Timeout.Infinite, AutoReconnectDelay);
         }
 
-        void AutoReconnectTimerEventHandler(object state)
+        private void AutoReconnectTimerEventHandler(object state)
         {
             //Do not reconnect if AutoReconnectDalay < 0 or if SmppClient is shutdown
-            if (AutoReconnectDelay <= 0 || !Started) { return; }
+            if (AutoReconnectDelay <= 0 || !Started)
+            {
+                return;
+            }
+
             //Stop the timer from raising subsequent events before
             //the current thread exists
             StopTimer();
 
             int timeOut = 0;
-            timeOut = vTimeOut;
+            timeOut = timeout;
             try { Open(timeOut); }
             catch (Exception) {/*Do nothing*/}
 
-            if (vState == SmppConnectionState.Closed)
+            if (ConnectionState == SmppConnectionState.Closed)
             { StartTimer(); }
             else
             { StopTimer(); }
         }
-
-        #endregion
 
         public void Dispose()
         {
@@ -556,11 +504,13 @@ namespace JamaaTech.Smpp.Net.Client
         {
             try
             {
-                Shutdown();
-                if (vTimer != null) { vTimer.Dispose(); }
+                Stop();
+                if (timer != null)
+                {
+                    timer.Dispose();
+                }
             }
             catch { /*Sielent catch*/ }
         }
-        #endregion
     }
 }
