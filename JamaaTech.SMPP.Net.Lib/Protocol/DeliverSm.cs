@@ -32,6 +32,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
         private string vValidityPeriod;
         private bool vReplaceIfPresent;
         private byte vSmDefalutMessageId;
+        private string vMessageId;
         private byte[] vMessageBytes;
         #endregion
 
@@ -81,6 +82,13 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
             get { return vSmDefalutMessageId; }
             set { vSmDefalutMessageId = value; }
         }
+
+        public string MessageId
+        {
+            get { return vMessageId; }
+            set{ vMessageId = value; }
+        }
+
         #endregion
 
         #region Constructors
@@ -125,6 +133,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
             buffer.Append(vReplaceIfPresent ? (byte)1 : (byte)0);
             buffer.Append((byte)vDataCoding);
             buffer.Append(vSmDefalutMessageId);
+
             //Check if vMessageBytes is not null
             if (vMessageBytes == null)
             {
@@ -170,6 +179,12 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
                 vMessageBytes = buffer.Remove(length);
             }
             if (buffer.Length > 0) { vTlv = TlvCollection.Parse(buffer); }
+            var messageIdTag = vTlv.GetTlvByTag(Tag.receipted_message_id);
+            if (messageIdTag != null)
+            {
+                var bytesValue = vTlv.GetTlvByTag(Tag.receipted_message_id).RawValue;
+                this.MessageId = SMPPEncodingUtil.GetStringFromBytes(bytesValue);
+            }                
         }
 
         public override byte[] GetMessageBytes()

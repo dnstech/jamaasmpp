@@ -51,7 +51,8 @@ namespace JamaaTech.Smpp.Net.Client
         {
             if(connectionProperties == null)
             {
-                throw new ArgumentNullException(nameof(connectionProperties), "Connection properties must be set");
+                // IL: replaced nameof(connectionProperties)
+                throw new ArgumentNullException(typeof(SmppConnectionProperties).Name, "Connection properties must be set");
             }
 
             ConnectionProperties = connectionProperties;
@@ -97,12 +98,19 @@ namespace JamaaTech.Smpp.Net.Client
                 throw new SmppClientException("Sending message operation failed because the SmppClient is not connected");
             }
 
+            var counter = 0;
             foreach (SendSmPDU pdu in message.GetMessagePDUs(ConnectionProperties.DefaultEncoding))
-            {
+            {                
                 ResponsePDU response = transieverSession.SendPdu(pdu, timeOut);
                 if (response.Header.ErrorCode != SmppErrorCode.ESME_ROK)
                 {
                     throw new SmppException(response.Header.ErrorCode);
+                }
+
+                var smResponse = response as SubmitSmResp;
+                if (smResponse != null)
+                {
+                    message.MessageId = smResponse.MessageID;
                 }
 
                 RaiseMessageSentEvent(message);
@@ -405,9 +413,16 @@ namespace JamaaTech.Smpp.Net.Client
             }
 
             ShortMessage message = null;
+            var request = e.Request as DeliverSm;
+            string messageId = string.Empty;
+            if (request != null)
+            {
+                messageId = request.MessageId;
+            }
+
             try
             {
-                message = MessageFactory.CreateMessage(pdu);
+                message = MessageFactory.CreateMessage(pdu, messageId);
             }
             catch (SmppException smppEx)
             {
@@ -445,6 +460,7 @@ namespace JamaaTech.Smpp.Net.Client
                 RaiseMessageReceivedEvent(message);
             }
 
+            // TODO: Add another event to notify of Delivery Failures
             //Or if we have received a delivery receipt
             else if ((pdu.EsmClass & EsmClass.DeliveryReceipt) == EsmClass.DeliveryReceipt)
             {

@@ -107,6 +107,10 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
         public override ResponsePDU CreateDefaultResponce()
         {
             PDUHeader header = new PDUHeader(CommandType.DeliverSmResp, vHeader.SequenceNumber);
+
+            //// TODO: Should we use the code below?
+            //// PDUHeader header = new PDUHeader(CommandType.SubmitSmResp, vHeader.SequenceNumber);
+            
             return new SubmitSmResp(header);
         }
 

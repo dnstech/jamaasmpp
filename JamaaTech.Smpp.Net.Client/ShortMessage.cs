@@ -47,5 +47,8 @@ namespace JamaaTech.Smpp.Net.Client
         public string Text { get; protected set; }
 
         public bool RegisterDeliveryNotification { get; protected set; }
+
+        public string MessageId { get; set; }
+
     }
 }
