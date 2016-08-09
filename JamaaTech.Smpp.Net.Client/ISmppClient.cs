@@ -2,6 +2,8 @@
 
 namespace JamaaTech.Smpp.Net.Client
 {
+    using System.Collections.Generic;
+
     public interface ISmppClient : IDisposable
     {
         /// <summary>
@@ -133,5 +135,7 @@ namespace JamaaTech.Smpp.Net.Client
         /// </summary>
         /// <param name="result">An <see cref="IAsyncResult"/> that stores state information for this asynchronous operation</param>
         void EndSendMessage(IAsyncResult result);
+
+        void QueryMessage(TextMessage message);
     }
 }

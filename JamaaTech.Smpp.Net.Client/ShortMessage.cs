@@ -50,5 +50,10 @@ namespace JamaaTech.Smpp.Net.Client
 
         public string MessageId { get; set; }
 
+        public string ErrorCode { get; set; }
+
+        public string FinalDate { get; set; }
+
+        public string MessageState { get; set; }
     }
 }
