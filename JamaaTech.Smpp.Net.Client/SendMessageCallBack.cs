@@ -22,5 +22,5 @@ namespace JamaaTech.Smpp.Net.Client
     /// </summary>
     /// <param name="message">A message to send</param>
     /// <param name="timeout">A value indicating the time in miliseconds after which the send operation times out</param>
-    internal delegate void SendMessageCallBack(TextMessage message,int timeout);
+    internal delegate void SendMessageCallBack(ShortMessage message, int timeout);
 }

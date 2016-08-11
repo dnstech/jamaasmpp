@@ -15,9 +15,6 @@
  ************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using JamaaTech.Smpp.Net.Lib;
 using JamaaTech.Smpp.Net.Lib.Util;
 
 namespace JamaaTech.Smpp.Net.Lib.Protocol
@@ -93,9 +90,9 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
         {
             if (buffer == null) { throw new ArgumentNullException("buffer"); }
             vMessageID = DecodeCString(buffer);
-            vFinalDate = DecodeCString(buffer);
-            vMessageState = (MessageState)GetByte(buffer);
+            vFinalDate = DecodeCString(buffer);            
             vErrorCode = GetByte(buffer);
+            vMessageState = (MessageState)GetByte(buffer);
             //This pdu has no option parameters,
             //If the buffer still contains something,
             //the we received more that required bytes

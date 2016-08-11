@@ -16,44 +16,56 @@
 
 namespace JamaaTech.Smpp.Net.Client
 {
+    using JamaaTech.Smpp.Net.Lib;
+
     /// <summary>
     /// Defines a base class for diffent types of messages that can be used with <see cref="SmppClient"/>
     /// </summary>
     public class ShortMessage : IShortMessage
     {
-        public ShortMessage(string sourceAddress, string destinatinAddress, string text, bool deliveryNotification = false)
+        public ShortMessage(string sourceAddress, string destinationAddress, string text, bool deliveryNotification = false)
         {
-            SourceAddress = sourceAddress;
-            DestinationAddress = destinatinAddress;
-            Text = text;
-            RegisterDeliveryNotification = deliveryNotification;
+            this.Text = text;
+            this.SourceAddress = sourceAddress;
+            this.DestinationAddress = destinationAddress;            
+            this.RegisterDeliveryNotification = deliveryNotification;
         }
 
-        public ShortMessage(int segmentId, int messageCount, string sourceAddress, string destinatinAddress, string text, bool deliveryNotification = false)
-            : this(sourceAddress, destinatinAddress, text, deliveryNotification)
+        public ShortMessage(string sourceAddress, string destinationAddress, int multiSegmentMessageReferenceNumber, int segmentSequenceNumber, int totalSegments, string text, DataCoding dataCoding, bool deliveryNotification = false)
+            : this(sourceAddress, destinationAddress, text, deliveryNotification)
         {
-            SegmentID = segmentId;
-            MessageCount = messageCount;
+            this.Text = text;
+            this.DataCoding = dataCoding;
+            this.SourceAddress = sourceAddress;
+            this.DestinationAddress = destinationAddress;            
+            this.RegisterDeliveryNotification = deliveryNotification;
+            this.MultiSegmentMessageReferenceNumber = multiSegmentMessageReferenceNumber;
+            this.SegmentSequenceNumber = segmentSequenceNumber;
+            this.TotalSegments = totalSegments;
         }
+
+        public DataCoding DataCoding { get; protected set; }
         
         public string SourceAddress { get; protected set; }
 
         public string DestinationAddress { get; protected set; }
 
-        public int SegmentID { get; protected set; }
+        public bool RegisterDeliveryNotification { get; protected set; }
 
-        public int MessageCount { get; protected set; }
+        public int MultiSegmentMessageReferenceNumber { get; protected set; }
+
+        public int SegmentSequenceNumber { get; protected set; }
+
+        public int TotalSegments { get; protected set; }
 
         public string Text { get; protected set; }
 
-        public bool RegisterDeliveryNotification { get; protected set; }
+        public string SmppMessageId { get; set; }
 
-        public string MessageId { get; set; }
+        public string SmppErrorCode { get; set; }
 
-        public string ErrorCode { get; set; }
+        public string SmppFinalDate { get; set; }
 
-        public string FinalDate { get; set; }
-
-        public string MessageState { get; set; }
+        public string SmppMessageState { get; set; }
     }
 }

@@ -6,11 +6,11 @@
  * Jamaa SMPP Client Library is free software. You can redistribute it and/or modify
  * it under the terms of the Microsoft Reciprocal License (Ms-RL)
  *
- * You should have received a copy of the Microsoft Reciprocal License
+ * You should have received a copy of the Microsoft Recisprocal License
  * along with Jamaa SMPP Client Library; See License.txt for more details.
  *
  * Author: Benedict J. Tesha
- * benedict.tesha@jamaatech.com, www.jamaatech.com
+ * benedict.tesha@jamaatech.com, www.jamaatech.coms
  *
  ************************************************************************/
 
@@ -86,48 +86,96 @@ namespace JamaaTech.Smpp.Net.Client
 
         public bool Started { get; private set; }
 
-        public void SendMessage(TextMessage message, int timeOut)
+        internal SendSmPDU GetMessagePdu(ShortMessage message)
+        {
+            if (message == null)
+            {
+                throw new SmppClientException("Each message should have at least a single segment");
+            }
+
+            var sm = new SubmitSm();
+            sm.SourceAddress.Address = message.SourceAddress;
+            sm.DestinationAddress.Address = message.DestinationAddress;
+            sm.RegisteredDelivery = message.RegisterDeliveryNotification ? RegisteredDelivery.DeliveryReceipt : RegisteredDelivery.None;
+            sm.DataCoding = message.DataCoding;
+            sm.SetMessageBytes(SMPPEncodingUtil.GetBytesFromString(message.Text, sm.DataCoding));
+
+            return sm;
+        }
+
+        public bool QueryMessage(ShortMessage message)
+        {
+            if (message == null)
+            {
+                return false;
+            }
+
+            if (this.ConnectionState != SmppConnectionState.Connected)
+            {
+                throw new SmppClientException("Quering sent messages failed because the SmppClient is not connected");
+            }
+
+            var querySm = new QuerySm { MessageID = message.SmppMessageId };
+            ResponsePDU response = this.transieverSession.SendPdu(querySm);
+            if (response.Header.ErrorCode != SmppErrorCode.ESME_ROK)
+            {
+                throw new SmppException(response.Header.ErrorCode);
+            }
+
+            var querySmResponse = response as QuerySmResp;
+            if (querySmResponse != null)
+            {                
+                message.SmppFinalDate = querySmResponse.FinalDate;
+                message.SmppErrorCode = querySmResponse.ErrorCode.ToString();
+                message.SmppMessageState = querySmResponse.MessageState.ToString();
+            }
+
+            return true;
+        }
+
+        public void SendMessage(ShortMessage message, int timeOut)
         {
             if (message == null)
             {
                 throw new ArgumentNullException("message");
             }
 
-            if (ConnectionState != SmppConnectionState.Connected)
+            if (this.ConnectionState != SmppConnectionState.Connected)
             {
                 throw new SmppClientException("Sending message operation failed because the SmppClient is not connected");
             }
 
-            var counter = 0;
-            foreach (SendSmPDU pdu in message.GetMessagePDUs(ConnectionProperties.DefaultEncoding))
-            {                
-                ResponsePDU response = transieverSession.SendPdu(pdu, timeOut);
-                if (response.Header.ErrorCode != SmppErrorCode.ESME_ROK)
-                {
-                    throw new SmppException(response.Header.ErrorCode);
-                }
+            var sm = new SubmitSm();
+            sm.SourceAddress.Address = message.SourceAddress;
+            sm.DestinationAddress.Address = message.DestinationAddress;
+            sm.RegisteredDelivery = message.RegisterDeliveryNotification ? RegisteredDelivery.DeliveryReceipt : RegisteredDelivery.None;
+            sm.DataCoding = message.DataCoding;
+            sm.SetMessageBytes(SMPPEncodingUtil.GetBytesFromString(message.Text, sm.DataCoding));
 
-                var smResponse = response as SubmitSmResp;
-                if (smResponse != null)
-                {
-                    message.MessageId = smResponse.MessageID;
-                }
 
-                RaiseMessageSentEvent(message);
+            var response = this.transieverSession.SendPdu(sm, timeOut);
+            if (response.Header.ErrorCode != SmppErrorCode.ESME_ROK)
+            {
+                throw new SmppException(response.Header.ErrorCode);
             }
+
+            message.SmppMessageId = GetMessageIdFromResponse(response);
+
+            this.RaiseMessageSentEvent(message);
+            
         }
 
-        public void SendMessage(TextMessage message)
+        public void SendMessage(ShortMessage message)
         {
             SendMessage(message, transieverSession.DefaultResponseTimeout);
         }
 
-        public IAsyncResult BeginSendMessage(TextMessage message, int timeout, AsyncCallback callback, object state)
+        public IAsyncResult BeginSendMessage(ShortMessage message, int timeout, AsyncCallback callback, object state)
         {
             return sendMessageCallback.BeginInvoke(message, timeout, callback, state);
         }
 
-        public IAsyncResult BeginSendMessage(TextMessage message, AsyncCallback callback, object state)
+        public IAsyncResult BeginSendMessage(ShortMessage message, AsyncCallback callback, object state)
         {
             int timeout = 0;
             timeout = transieverSession.DefaultResponseTimeout;
@@ -403,6 +451,124 @@ namespace JamaaTech.Smpp.Net.Client
             StateChanged(this, e);
         }
 
+        //// message_id should be implemented in the following packet types according to the spec - http://docs.nimta.com/SMPP_v3_4_Issue1_2.pdf:
+        //// => submit_sm_resp	    (from SMSC to ESME)				            [OK]
+        //// => submit_multi_resp	(from SMSC to ESME)				            [Missing]
+        //// => deliver_sm		    (from SMSC to ESME)				            [OK]	
+        //// => deliver_sm_resp	    (from ESME to SMSC)				            [Missing]
+        //// => data_sm		        (from SMSC to ESME) / (from ESME to SMSC)	[Missing]
+        //// => data_sm_resp        (from SMSC to ESME) / (from ESME to SMSC)	[OK]
+        //// => query_sm            (from ESME to SMSC)				            [OK]
+        //// => query_sm_resp       (from SMSC to ESME)				            [OK]
+        //// => cancel_sm		    (from ESME to SMSC)				            [OK]
+        //// => replace_sm		    (from ESME to SMSC)				            [OK]
+
+        //// message_state should be implemented in the following packet types according to the spec - http://docs.nimta.com/SMPP_v3_4_Issue1_2.pdf:
+        //// => deliver_sm 		    (from SMSC to ESME)				            [Missing] – attempted to fix
+        //// => data_sm		        (from SMSC to ESME) / (from ESME to SMSC)	[Missing]
+        //// => query_sm_resp	    (from SMSC to ESME)				            [OK]
+
+
+        private static string GetMessageIdFromResponse(ResponsePDU response)
+        {
+            if (response == null)
+            {
+                return string.Empty;
+            }
+
+            var submitSmResp = response as SubmitSmResp;
+            if (submitSmResp != null)
+            {
+                return submitSmResp.MessageID;
+            }
+
+            var dataSmResp = response as DataSmResp;
+            if (dataSmResp != null)
+            {
+                return dataSmResp.MessageID;
+            }
+
+            var querySmResp = response as QuerySmResp;
+            if (querySmResp != null)
+            {
+                return querySmResp.MessageID;
+            }
+
+            return string.Empty;
+
+            // Not supported ATM
+            ////var deliverSmResp = response as DeliverSmResp;
+            ////if (deliverSmResp != null)
+            ////{
+            ////    return deliverSmResp.MessageId;
+            ////}           
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        private static string GetMessageIdFromRequest(RequestPDU request)
+        {
+            if (request == null)
+            {
+                return string.Empty;
+            }
+
+            // From SMSC (server) to ESME (terminal)
+            var deliverSm = request as DeliverSm;
+            if (deliverSm != null)
+            {
+                return deliverSm.MessageId;
+            }
+
+            // SmOperationPDU includes: QuerySm, CancelSm, ReplaceSm
+            var smOperationPdu = request as SmOperationPDU;
+            if (smOperationPdu != null)
+            {
+                return smOperationPdu.MessageID;
+            }
+
+            return string.Empty;
+        }
+
+        private static string GetMessageStateFromRequest(RequestPDU request)
+        {
+            if (request == null)
+            {
+                return string.Empty;
+            }
+
+            // From SMSC (server) to ESME (terminal)
+            var deliverSm = request as DeliverSm;
+            if (deliverSm != null)
+            {
+                return deliverSm.MessageState.ToString();
+            }
+
+            // TODO: Add support for other packages - see the commented section above
+            return string.Empty;
+        }
+
+        private static string GetMessageStateFromRequest(ResponsePDU response)
+        {
+            if (response == null)
+            {
+                return string.Empty;
+            }
+
+            // From SMSC (server) to ESME (terminal)
+            var querySmResp = response as QuerySmResp;
+            if (querySmResp != null)
+            {
+                return querySmResp.MessageState.ToString();
+            }
+
+            // TODO: Add support for other packages - see the commented section above
+            return string.Empty;
+        }
+
         private void PduReceivedEventHander(object sender, PduReceivedEventArgs e)
         {
             //This handler is interested in SingleDestinationPDU only
@@ -412,17 +578,12 @@ namespace JamaaTech.Smpp.Net.Client
                 return;
             }
 
-            ShortMessage message = null;
-            var request = e.Request as DeliverSm;
-            string messageId = string.Empty;
-            if (request != null)
-            {
-                messageId = request.MessageId;
-            }
-
+            ShortMessage message;
             try
             {
-                message = MessageFactory.CreateMessage(pdu, messageId);
+                message = MessageFactory.CreateMessage(pdu);
+                message.SmppMessageId = GetMessageIdFromRequest(e.Request);;
+                message.SmppMessageState = GetMessageStateFromRequest(e.Request);
             }
             catch (SmppException smppEx)
             {
@@ -435,7 +596,7 @@ namespace JamaaTech.Smpp.Net.Client
                     Trace.WriteLine(traceMessage);
                 }
                 //Notify the SMSC that we encountered an error while processing the message
-                e.Response = pdu.CreateDefaultResponce();
+                e.Response = pdu.CreateDefaultResponse();
                 e.Response.Header.ErrorCode = smppEx.ErrorCode;
                 return;
             }
@@ -449,7 +610,7 @@ namespace JamaaTech.Smpp.Net.Client
                     Trace.WriteLine(traceMessage);
                 }
                 //Let the receiver know that this message was rejected
-                e.Response = pdu.CreateDefaultResponce();
+                e.Response = pdu.CreateDefaultResponse();
                 e.Response.Header.ErrorCode = SmppErrorCode.ESME_RX_P_APPN; //ESME Receiver Reject Message
                 return;
             }
@@ -460,9 +621,10 @@ namespace JamaaTech.Smpp.Net.Client
                 RaiseMessageReceivedEvent(message);
             }
 
-            // TODO: Add another event to notify of Delivery Failures
+            // TODO: Investigate why pdu is always set to Default instead of EsmClass.DeliveryReceipt
             //Or if we have received a delivery receipt
-            else if ((pdu.EsmClass & EsmClass.DeliveryReceipt) == EsmClass.DeliveryReceipt)
+            // else if ((pdu.EsmClass & EsmClass.DeliveryReceipt) == EsmClass.DeliveryReceipt)
+            else
             {
                 RaiseMessageDeliveredEvent(message);
             }

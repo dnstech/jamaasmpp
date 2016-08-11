@@ -17,7 +17,7 @@
 using System;
 using System.Text;
 
-namespace JamaaTech.Smpp.Net.Lib.Util
+namespace JamaaTech.Smpp.Net.Portable
 {
     public sealed class ByteBuffer
     {

@@ -39,8 +39,8 @@ namespace JamaaTech.Smpp.Net.Client
             //Check if the udh field is present
             //if (udh != null) { sms = new TextMessage(udh.SegmentID, udh.MessageCount, udh.MessageSequence); }
             if (udh != null)
-            {
-                return new RecievedShortMessage(udh.SegmentID, udh.MessageCount, udh.MessageSequence, pdu.SourceAddress.Address, pdu.DestinationAddress.Address, message, pdu.RegisteredDelivery == RegisteredDelivery.DeliveryReceipt);
+            {                
+                return new RecievedShortMessage(pdu.SourceAddress.Address, pdu.DestinationAddress.Address, udh.MmultiSegmentMessageReferenceNumber, udh.SegmentSequenceNumber, udh.TotalSegments, message, pdu.RegisteredDelivery == RegisteredDelivery.DeliveryReceipt);
             }
 
             return new RecievedShortMessage(pdu.SourceAddress.Address, pdu.DestinationAddress.Address, message, pdu.RegisteredDelivery == RegisteredDelivery.DeliveryReceipt);

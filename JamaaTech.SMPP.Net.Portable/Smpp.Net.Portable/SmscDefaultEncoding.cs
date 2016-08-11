@@ -17,9 +17,9 @@
 using System;
 using System.Text;
 
-namespace JamaaTech.Smpp.Net.Lib.Util
+namespace JamaaTech.Smpp.Net.Portable
 {
-    public static class SMSCDefaultEncoding
+    public static class SmscDefaultEncoding
     {
         #region Variables
         private static char[] vDefaultForwardTable;
@@ -28,7 +28,7 @@ namespace JamaaTech.Smpp.Net.Lib.Util
         #endregion
 
         #region Type Initializer
-        static SMSCDefaultEncoding()
+        static SmscDefaultEncoding()
         {
             BuildTable();
         }

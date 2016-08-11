@@ -16,7 +16,7 @@
 
 using System;
 
-namespace JamaaTech.Smpp.Net.Lib
+namespace JamaaTech.Smpp.Net.Portable
 {
     public enum SmppErrorCode : uint
     {

@@ -16,7 +16,7 @@
 
 using System;
 
-namespace JamaaTech.Smpp.Net.Lib.Util
+namespace JamaaTech.Smpp.Net.Portable
 {
     public static class Latin1Encoding
     {
