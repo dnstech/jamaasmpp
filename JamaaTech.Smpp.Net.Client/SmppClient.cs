@@ -142,7 +142,7 @@ namespace JamaaTech.Smpp.Net.Client
                 throw new SmppException(response.Header.ErrorCode);
             }
 
-            message.SmppMessageId = GetMessageIdFromResponse(response);
+            message.SmppMessageId = GetMessageIdFromResponse(response);            
 
             this.RaiseMessageSentEvent(message);
             

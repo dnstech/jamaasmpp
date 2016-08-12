@@ -122,7 +122,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
         public override ResponsePDU CreateDefaultResponse()
         {
             PDUHeader header = new PDUHeader(CommandType.DeliverSmResp, vHeader.SequenceNumber);
-            return new GenericNack(header);
+            return new DeliverSmResp(header);
         }
 
         protected override byte[] GetBodyData()
