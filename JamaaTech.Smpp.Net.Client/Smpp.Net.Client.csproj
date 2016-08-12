@@ -66,6 +66,10 @@
       <Project>{181F2022-E0DD-415E-BBBA-7C5E0303AAF8}</Project>
       <Name>Smpp.Net.Lib</Name>
     </ProjectReference>
+    <ProjectReference Include="..\JamaaTech.SMPP.Net.Portable\Smpp.Net.Portable\Smpp.Net.Portable.csproj">
+      <Project>{bd240801-5196-4b32-aa9f-1a16ac458270}</Project>
+      <Name>Smpp.Net.Portable</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="Jamaa Smpp Client.snk" />

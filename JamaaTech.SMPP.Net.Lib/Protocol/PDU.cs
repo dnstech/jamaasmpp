@@ -15,11 +15,9 @@
  ************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
+using JamaaTech.Smpp.Net.Portable;
 using JamaaTech.Smpp.Net.Lib.Protocol.Tlv;
 using JamaaTech.Smpp.Net.Lib.Util;
-using JamaaTech.Smpp.Net.Lib;
 
 namespace JamaaTech.Smpp.Net.Lib.Protocol
 {
@@ -189,7 +187,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
             //Get next terminating null value
             int pos = buffer.Find(0x00);
             if (pos < 0) { throw new PDUFormatException("CString type field could not be read. The terminating charactor is missing"); }
-            try { string value = SMPPEncodingUtil.GetCStringFromBytes(buffer.Remove(pos + 1)); return value; }
+            try { string value = SmppEncodingUtil.GetCStringFromBytes(buffer.Remove(pos + 1)); return value; }
             catch (ArgumentException ex)
             {
                 //ByteBuffer.Remove(int count) throw ArgumentException if the buffer length is less than count
@@ -202,12 +200,12 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
         internal static byte[] EncodeCString(string str)
         {
             if (str == null) { str = ""; }
-            return SMPPEncodingUtil.GetBytesFromCString(str);
+            return SmppEncodingUtil.GetBytesFromCString(str);
         }
 
         internal static string DecodeString(ByteBuffer buffer, int length)
         {
-            try { string value = SMPPEncodingUtil.GetStringFromBytes(buffer.Remove(length)); return value; }
+            try { string value = SmppEncodingUtil.GetStringFromBytes(buffer.Remove(length)); return value; }
             catch(ArgumentException ex)
             {
                 //ByteBuffer.Remove(int count) throw ArgumentException if the buffer length is less than count
@@ -233,7 +231,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
         internal static byte[] EncodeString(string str)
         {
             if (str == null) { str = ""; }
-            return SMPPEncodingUtil.GetBytesFromString(str);
+            return SmppEncodingUtil.GetBytesFromString(str);
         }
         #endregion
 

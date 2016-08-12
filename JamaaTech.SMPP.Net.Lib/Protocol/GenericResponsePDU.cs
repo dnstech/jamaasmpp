@@ -15,8 +15,7 @@
  ************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
+using JamaaTech.Smpp.Net.Portable;
 
 namespace JamaaTech.Smpp.Net.Lib.Protocol
 {
@@ -33,7 +32,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
             return null; 
         }
 
-        protected override void Parse(JamaaTech.Smpp.Net.Lib.Util.ByteBuffer buffer)
+        protected override void Parse(ByteBuffer buffer)
         {
             if (buffer.Length > 0) { throw new TooManyBytesException(); }
         }

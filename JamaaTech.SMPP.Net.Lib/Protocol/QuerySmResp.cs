@@ -15,7 +15,7 @@
  ************************************************************************/
 
 using System;
-using JamaaTech.Smpp.Net.Lib.Util;
+using JamaaTech.Smpp.Net.Portable;
 
 namespace JamaaTech.Smpp.Net.Lib.Protocol
 {

@@ -16,7 +16,7 @@
 
 namespace JamaaTech.Smpp.Net.Client
 {
-    using JamaaTech.Smpp.Net.Lib;
+    using JamaaTech.Smpp.Net.Portable;
 
     /// <summary>
     /// Defines a base class for diffent types of messages that can be used with <see cref="SmppClient"/>

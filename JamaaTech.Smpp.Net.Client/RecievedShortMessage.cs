@@ -1,7 +1,7 @@
 ﻿
 namespace JamaaTech.Smpp.Net.Client
 {
-    using JamaaTech.Smpp.Net.Lib;
+    using JamaaTech.Smpp.Net.Portable;
 
     public class RecievedShortMessage : ShortMessage
     {

@@ -15,6 +15,7 @@
  ************************************************************************/
 
 using System;
+using JamaaTech.Smpp.Net.Portable;
 using JamaaTech.Smpp.Net.Lib.Util;
 using System.Diagnostics;
 
@@ -107,7 +108,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
             }
             //Check if we have something remaining in the buffer
             if (buffer.Length == 0) { return; }
-            try { message = SMPPEncodingUtil.GetStringFromBytes(buffer.ToBytes(), DataCoding); }
+            try { message = SmppEncodingUtil.GetStringFromBytes(buffer.ToBytes(), DataCoding); }
             catch (Exception ex1)
             {
                 if (vTraceSwitch.TraceError)
@@ -129,7 +130,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
         {
             ByteBuffer buffer = new ByteBuffer(160);
             if (udh != null) { buffer.Append(udh.GetBytes()); }
-            buffer.Append(SMPPEncodingUtil.GetBytesFromString(message, dataCoding));
+            buffer.Append(SmppEncodingUtil.GetBytesFromString(message, dataCoding));
             SetMessageBytes(buffer.ToBytes());
             if (udh != null) { EsmClass = EsmClass | EsmClass.UdhiIndicator; }
             DataCoding = dataCoding;

@@ -146,6 +146,12 @@
   <ItemGroup>
     <None Include="Jamaa Smpp Client.snk" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\JamaaTech.SMPP.Net.Portable\Smpp.Net.Portable\Smpp.Net.Portable.csproj">
+      <Project>{bd240801-5196-4b32-aa9f-1a16ac458270}</Project>
+      <Name>Smpp.Net.Portable</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

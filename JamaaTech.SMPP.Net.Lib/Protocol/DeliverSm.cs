@@ -15,7 +15,7 @@
  ************************************************************************/
 
 using System;
-using JamaaTech.Smpp.Net.Lib.Util;
+using JamaaTech.Smpp.Net.Portable;
 using JamaaTech.Smpp.Net.Lib.Protocol.Tlv;
 
 namespace JamaaTech.Smpp.Net.Lib.Protocol
@@ -195,7 +195,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
             if (messageIdTag != null)
             {
                 var bytesValue = vTlv.GetTlvByTag(Tag.receipted_message_id).RawValue;
-                this.MessageId = SMPPEncodingUtil.GetStringFromBytes(bytesValue);
+                this.MessageId = SmppEncodingUtil.GetStringFromBytes(bytesValue);
             }
 
             var messageStateTag = vTlv.GetTlvByTag(Tag.message_state);

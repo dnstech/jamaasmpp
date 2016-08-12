@@ -16,8 +16,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using JamaaTech.Smpp.Net.Lib.Util;
+using JamaaTech.Smpp.Net.Portable;
 
 namespace JamaaTech.Smpp.Net.Lib.Protocol.Tlv
 {

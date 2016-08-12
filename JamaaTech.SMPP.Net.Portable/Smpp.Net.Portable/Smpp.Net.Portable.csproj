@@ -7,10 +7,11 @@
     <ProjectGuid>{BD240801-5196-4B32-AA9F-1A16AC458270}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Smpp.Net.Portable</RootNamespace>
-    <AssemblyName>Smpp.Net.Portable</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <RootNamespace>JamaaTech.Smpp.Net.Portable</RootNamespace>
+    <AssemblyName>JamaaTech.Smpp.Net.Portable.v1.4</AssemblyName>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -28,6 +29,12 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>Jamaa Smpp Portable.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -47,6 +54,9 @@
     <Compile Include="SmppErrorCode.cs" />
     <Compile Include="SmppException.cs" />
     <Compile Include="SmscDefaultEncoding.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Jamaa Smpp Portable.pfx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

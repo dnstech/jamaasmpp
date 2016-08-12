@@ -15,6 +15,7 @@
  ************************************************************************/
 
 using System;
+using JamaaTech.Smpp.Net.Portable;
 using JamaaTech.Smpp.Net.Lib.Util;
 
 namespace JamaaTech.Smpp.Net.Lib
@@ -97,7 +98,7 @@ namespace JamaaTech.Smpp.Net.Lib
             }
             else if (length == 6 && iei == 8 && ieidl == 4) //16 bits message reference
             {
-                segId = SMPPEncodingUtil.GetShortFromBytes(buffer.Remove(2));
+                segId = SmppEncodingUtil.GetShortFromBytes(buffer.Remove(2));
                 count = buffer.Remove();
                 seq = buffer.Remove();
             }

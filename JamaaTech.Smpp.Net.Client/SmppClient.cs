@@ -19,7 +19,7 @@ using System.Threading;
 using System.Diagnostics;
 using JamaaTech.Smpp.Net.Lib;
 using JamaaTech.Smpp.Net.Lib.Protocol;
-using JamaaTech.Smpp.Net.Lib.Util;
+using JamaaTech.Smpp.Net.Portable;
 
 namespace JamaaTech.Smpp.Net.Client
 {
@@ -86,23 +86,6 @@ namespace JamaaTech.Smpp.Net.Client
 
         public bool Started { get; private set; }
 
-        internal SendSmPDU GetMessagePdu(ShortMessage message)
-        {
-            if (message == null)
-            {
-                throw new SmppClientException("Each message should have at least a single segment");
-            }
-
-            var sm = new SubmitSm();
-            sm.SourceAddress.Address = message.SourceAddress;
-            sm.DestinationAddress.Address = message.DestinationAddress;
-            sm.RegisteredDelivery = message.RegisterDeliveryNotification ? RegisteredDelivery.DeliveryReceipt : RegisteredDelivery.None;
-            sm.DataCoding = message.DataCoding;
-            sm.SetMessageBytes(SMPPEncodingUtil.GetBytesFromString(message.Text, sm.DataCoding));
-
-            return sm;
-        }
-
         public bool QueryMessage(ShortMessage message)
         {
             if (message == null)
@@ -150,7 +133,7 @@ namespace JamaaTech.Smpp.Net.Client
             sm.DestinationAddress.Address = message.DestinationAddress;
             sm.RegisteredDelivery = message.RegisterDeliveryNotification ? RegisteredDelivery.DeliveryReceipt : RegisteredDelivery.None;
             sm.DataCoding = message.DataCoding;
-            sm.SetMessageBytes(SMPPEncodingUtil.GetBytesFromString(message.Text, sm.DataCoding));
+            sm.SetMessageBytes(SmppEncodingUtil.GetBytesFromString(message.Text, sm.DataCoding));
 
 
             var response = this.transieverSession.SendPdu(sm, timeOut);
