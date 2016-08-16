@@ -29,6 +29,8 @@ namespace JamaaTech.Smpp.Net.Client
             this.SourceAddress = sourceAddress;
             this.DestinationAddress = destinationAddress;            
             this.RegisterDeliveryNotification = deliveryNotification;
+            this.SegmentSequenceNumber = 1;
+            this.TotalSegments = 1;
         }
 
         public ShortMessage(string sourceAddress, string destinationAddress, int multiSegmentMessageReferenceNumber, int segmentSequenceNumber, int totalSegments, string text, DataCoding dataCoding, bool deliveryNotification = false)
