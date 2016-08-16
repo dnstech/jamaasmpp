@@ -90,9 +90,9 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
         {
             if (buffer == null) { throw new ArgumentNullException("buffer"); }
             vMessageID = DecodeCString(buffer);
-            vFinalDate = DecodeCString(buffer);            
-            vErrorCode = GetByte(buffer);
+            vFinalDate = DecodeCString(buffer);
             vMessageState = (MessageState)GetByte(buffer);
+            vErrorCode = GetByte(buffer);            
             //This pdu has no option parameters,
             //If the buffer still contains something,
             //the we received more that required bytes
