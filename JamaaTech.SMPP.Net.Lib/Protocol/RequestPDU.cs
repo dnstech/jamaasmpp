@@ -35,7 +35,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
         #endregion
 
         #region Methods
-        public abstract ResponsePDU CreateDefaultResponce();
+        public abstract ResponsePDU CreateDefaultResponse();
         #endregion
     }
 }

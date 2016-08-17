@@ -300,12 +300,16 @@ namespace JamaaTech.Smpp.Net.Lib.Networking
 
         private void TerminateSession(SessionCloseReason reason, Exception exception)
         {
-            //shutdown socket
-            vSocket.Shutdown(SocketShutdown.Both);
-            //disconnect socket
-            vSocket.Disconnect(false);
-            //Close to release any resources claimed by the socket instance
-            vSocket.Close();
+            if (vSocket != null)
+            {
+                //shutdown socket
+                vSocket.Shutdown(SocketShutdown.Both);
+                //disconnect socket
+                vSocket.Disconnect(false);
+                //Close to release any resources claimed by the socket instance
+                vSocket.Close();
+            }
+
             RaiseSessionClosedEvent(reason, exception);
         }
 

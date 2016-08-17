@@ -15,10 +15,7 @@
  ************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using JamaaTech.Smpp.Net.Lib.Util;
-using JamaaTech.Smpp.Net.Lib;
+using JamaaTech.Smpp.Net.Portable;
 
 namespace JamaaTech.Smpp.Net.Lib.Protocol
 {
@@ -105,7 +102,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
 
         #region Methods
         #region Interface Methods
-        public override ResponsePDU CreateDefaultResponce()
+        public override ResponsePDU CreateDefaultResponse()
         {
             CommandType cmdType = CommandType.BindTransceiverResp;
             switch (vHeader.CommandType)

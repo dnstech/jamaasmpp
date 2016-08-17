@@ -1,6 +1,8 @@
 ﻿
 namespace JamaaTech.Smpp.Net.Client
 {
+    using JamaaTech.Smpp.Net.Portable;
+
     public class RecievedShortMessage : ShortMessage
     {
         internal RecievedShortMessage(string sourceAddress, string destinatinAddress, string text, bool deliveryNotification = false)
@@ -10,10 +12,10 @@ namespace JamaaTech.Smpp.Net.Client
 
         public int Sequence { get; private set; }
 
-        internal RecievedShortMessage(int segmentId, int maxCount, int sequence, string sourceAddress, string destinatinAddress, string text, bool deliveryNotification = false)
-            : base(segmentId, maxCount, sourceAddress, destinatinAddress, text, deliveryNotification)
+        internal RecievedShortMessage(string sourceAddress, string destinationAddress, int multiSegmentMessageReferenceNumber, int segmentSequenceNumber, int totalSegments, string text, bool deliveryNotification = false)
+            : base(sourceAddress, destinationAddress, multiSegmentMessageReferenceNumber, segmentSequenceNumber, totalSegments, text, DataCoding.SMSCDefault, deliveryNotification)
         {
-            Sequence = sequence;
+            this.Sequence = segmentSequenceNumber;
         }
     }
 }

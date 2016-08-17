@@ -15,15 +15,32 @@
  ************************************************************************/
 
 using System;
-using JamaaTech.Smpp.Net.Portable;
 
-namespace JamaaTech.Smpp.Net.Lib.Protocol
+namespace JamaaTech.Smpp.Net.Portable
 {
-    public class InvalidPDUCommandException : PDUException
+    public static class Latin1Encoding
     {
-        #region Constructors
-        public InvalidPDUCommandException()
-            : base(SmppErrorCode.ESME_RINVCMDID, "Invalid command ID") { }
+        #region Variables
+        private static System.Text.Encoding vEncoding;
+        #endregion
+
+        #region Type Initializer
+        static Latin1Encoding()
+        {
+            vEncoding = System.Text.Encoding.GetEncoding(28591/*"iso-8859-1"*/); //Latin 1 encoding
+        }
+        #endregion
+
+        #region Methods
+        public static byte[] GetBytes(string str)
+        {
+            return vEncoding.GetBytes(str);
+        }
+
+        public static string GetString(byte[] bytes)
+        {
+            return vEncoding.GetString(bytes);
+        }
         #endregion
     }
 }

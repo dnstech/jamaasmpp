@@ -15,11 +15,8 @@
  ************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using JamaaTech.Smpp.Net.Lib.Util;
+using JamaaTech.Smpp.Net.Portable;
 using JamaaTech.Smpp.Net.Lib.Protocol.Tlv;
-using JamaaTech.Smpp.Net.Lib;
 
 namespace JamaaTech.Smpp.Net.Lib.Protocol
 {
@@ -32,13 +29,17 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
         private string vValidityPeriod;
         private bool vReplaceIfPresent;
         private byte vSmDefalutMessageId;
+        private string vMessageId;
         private byte[] vMessageBytes;
+        private MessageState vMessageState;
         #endregion
 
         #region Properties
         public override SmppEntityType AllowedSource
         {
-            get { return SmppEntityType.ESME; }
+            // IL: expected to see SMSC based on spec http://docs.nimta.com/SMPP_v3_4_Issue1_2.pdf
+            // get { return SmppEntityType.ESME; }   
+            get { return SmppEntityType.SMSC; }   
         }
 
         public override SmppSessionState AllowedSession
@@ -81,6 +82,19 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
             get { return vSmDefalutMessageId; }
             set { vSmDefalutMessageId = value; }
         }
+
+        public string MessageId
+        {
+            get { return vMessageId; }
+            set{ vMessageId = value; }
+        }
+
+        public MessageState MessageState
+        {
+            get { return vMessageState; }
+            set { vMessageState = value; }
+        }
+
         #endregion
 
         #region Constructors
@@ -96,6 +110,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
             vReplaceIfPresent = false;
             vDataCoding = DataCoding.ASCII;
             vSmDefalutMessageId = 0;
+            vMessageState = MessageState.Unknown;
         }
 
         public DeliverSm()
@@ -104,7 +119,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
         #endregion
 
         #region Methods
-        public override ResponsePDU CreateDefaultResponce()
+        public override ResponsePDU CreateDefaultResponse()
         {
             PDUHeader header = new PDUHeader(CommandType.DeliverSmResp, vHeader.SequenceNumber);
             return new DeliverSmResp(header);
@@ -125,6 +140,10 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
             buffer.Append(vReplaceIfPresent ? (byte)1 : (byte)0);
             buffer.Append((byte)vDataCoding);
             buffer.Append(vSmDefalutMessageId);
+
+            // IL: is this going to work?
+            // buffer.Append((byte)vMessageState);
+
             //Check if vMessageBytes is not null
             if (vMessageBytes == null)
             {
@@ -159,6 +178,7 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
             vReplaceIfPresent = GetByte(buffer) == 0 ? false : true;
             vDataCoding = (DataCoding)GetByte(buffer);
             vSmDefalutMessageId = GetByte(buffer);
+
             int length = GetByte(buffer);
             if (length == 0) { vMessageBytes = null; }
             else
@@ -169,7 +189,21 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
                 }
                 vMessageBytes = buffer.Remove(length);
             }
+
             if (buffer.Length > 0) { vTlv = TlvCollection.Parse(buffer); }
+            var messageIdTag = vTlv.GetTlvByTag(Tag.receipted_message_id);
+            if (messageIdTag != null)
+            {
+                var bytesValue = vTlv.GetTlvByTag(Tag.receipted_message_id).RawValue;
+                this.MessageId = SmppEncodingUtil.GetStringFromBytes(bytesValue);
+            }
+
+            var messageStateTag = vTlv.GetTlvByTag(Tag.message_state);
+            if (messageStateTag != null)
+            {
+                var bytesValue = vTlv.GetTlvByTag(Tag.message_state).RawValue;
+                this.MessageState = (MessageState)GetByte(new ByteBuffer(bytesValue));
+            } 
         }
 
         public override byte[] GetMessageBytes()

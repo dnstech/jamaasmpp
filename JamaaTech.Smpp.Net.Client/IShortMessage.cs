@@ -19,18 +19,34 @@ namespace JamaaTech.Smpp.Net.Client
         bool RegisterDeliveryNotification { get; }
 
         /// <summary>
-        /// Gets the index of this message segment in a group of contatenated message segements
+        /// Total number of fragments within the concatenated short message
         /// </summary>
-        int SegmentID { get; }
+        int TotalSegments { get; }
 
         /// <summary>
-        /// Gets the message count
+        /// Sequence number of a particular message within the concatenated short message. Starting value is 1, then increments by 1.
         /// </summary>
-        int MessageCount { get; }
+        int SegmentSequenceNumber { get; }
 
         /// <summary>
-        /// Gets the message
+        /// Originator generated reference number so that a segmented short message may be reassembled into a single original message
+        /// </summary>
+        int MultiSegmentMessageReferenceNumber { get; }
+
+        /// <summary>
+        /// Message text contents
         /// </summary>
         string Text { get; }
+
+        /// <summary>
+        /// SMSC (SMPP Server) message id of the submitted message
+        /// </summary>
+        string SmppMessageId { get; set; }
+
+        string SmppErrorCode { get; set; }
+
+        string SmppFinalDate { get; set; }
+
+        string SmppMessageState { get; set; }                
     }
 }

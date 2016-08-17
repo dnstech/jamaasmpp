@@ -15,23 +15,23 @@
  ************************************************************************/
 
 using System;
-using JamaaTech.Smpp.Net.Portable;
 
-namespace JamaaTech.Smpp.Net.Lib.Protocol
+namespace JamaaTech.Smpp.Net.Portable
 {
-    public class PDUException : Exception
+    public class SmppException : Exception
     {
         #region Variables
         private SmppErrorCode vErrorCode;
         #endregion
 
         #region Constructors
-        public PDUException(SmppErrorCode errorCode) { vErrorCode = errorCode; }
+        public SmppException(SmppErrorCode errorCode)
+            : base() { vErrorCode = errorCode; }
 
-        public PDUException(SmppErrorCode errorCode, string message)
+        public SmppException(SmppErrorCode errorCode, string message)
             : base(message) { vErrorCode = errorCode; }
 
-        public PDUException(SmppErrorCode errorCode, string message, Exception innerException)
+        public SmppException(SmppErrorCode errorCode, string message, Exception innerException)
             : base(message, innerException) { vErrorCode = errorCode; }
         #endregion
 
@@ -41,5 +41,18 @@ namespace JamaaTech.Smpp.Net.Lib.Protocol
             get { return vErrorCode; }
         }
         #endregion
+
+        #region Methods
+        internal static void WrapAndThrow(Exception exception)
+        {
+            SmppException smppEx = new SmppException(SmppErrorCode.ESME_RUNKNOWNERR, exception.Message, exception);
+            throw smppEx;
+        }
+        #endregion
+
+        public override string ToString()
+        {
+            return string.Format("{0}: {1}{2}{3}", ErrorCode, Message, Environment.NewLine, base.ToString());
+        }
     }
 }

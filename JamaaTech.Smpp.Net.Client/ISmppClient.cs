@@ -101,13 +101,13 @@ namespace JamaaTech.Smpp.Net.Client
         /// </summary>
         /// <param name="message">A message to send</param>
         /// <param name="timeOut">A value in miliseconds after which the send operation times out</param>
-        void SendMessage(TextMessage message, int timeOut);
+        void SendMessage(ShortMessage message, int timeOut);
 
         /// <summary>
         /// Sends message to a remote SMPP server
         /// </summary>
         /// <param name="message">A message to send</param>
-        void SendMessage(TextMessage message);
+        void SendMessage(ShortMessage message);
 
         /// <summary>
         /// Sends message asynchronously to a remote SMPP server
@@ -117,7 +117,7 @@ namespace JamaaTech.Smpp.Net.Client
         /// <param name="callback">An <see cref="AsyncCallback"/> delegate</param>
         /// <param name="state">An object that contains state information for this request</param>
         /// <returns>An <see cref="IAsyncResult"/> that references the asynchronous send message operation</returns>
-        IAsyncResult BeginSendMessage(TextMessage message, int timeout, AsyncCallback callback, object state);
+        IAsyncResult BeginSendMessage(ShortMessage message, int timeout, AsyncCallback callback, object state);
 
         /// <summary>
         /// Sends message asynchronously to a remote SMPP server
@@ -126,12 +126,14 @@ namespace JamaaTech.Smpp.Net.Client
         /// <param name="callback">An <see cref="AsyncCallback"/> delegate</param>
         /// <param name="state">An object that contains state information for this request</param>
         /// <returns>An <see cref="IAsyncResult"/> that references the asynchronous send message operation</returns>
-        IAsyncResult BeginSendMessage(TextMessage message, AsyncCallback callback, object state);
+        IAsyncResult BeginSendMessage(ShortMessage message, AsyncCallback callback, object state);
 
         /// <summary>
         /// Ends a pending asynchronous send message operation
         /// </summary>
         /// <param name="result">An <see cref="IAsyncResult"/> that stores state information for this asynchronous operation</param>
         void EndSendMessage(IAsyncResult result);
+
+        bool QueryMessage(ShortMessage message);
     }
 }

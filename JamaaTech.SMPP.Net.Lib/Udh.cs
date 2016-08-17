@@ -15,8 +15,7 @@
  ************************************************************************/
 
 using System;
-using System.Text;
-using System.Collections.Generic;
+using JamaaTech.Smpp.Net.Portable;
 using JamaaTech.Smpp.Net.Lib.Util;
 
 namespace JamaaTech.Smpp.Net.Lib
@@ -24,9 +23,9 @@ namespace JamaaTech.Smpp.Net.Lib
     public class Udh
     {
         #region Variables
-        private int vSegmentId;
-        private int vMessageCount;
-        private int vMessageSequence;
+        private readonly int vMmultiSegmentMessageReferenceNumber;
+        private int vTotalSegments;
+        private int vSegmentSequenceNumber;
 
         private static object vSyncRoot;
         #endregion
@@ -37,36 +36,36 @@ namespace JamaaTech.Smpp.Net.Lib
             vSyncRoot = new object();
         }
 
-        public Udh(int segmentId, int messageCount, int messageSequence)
+        public Udh(int multiSegmentMessageReferenceNumber, int totalSegments, int segmentSequenceNumber)
         {
-            vSegmentId = segmentId;
-            vMessageCount = messageCount;
-            vMessageSequence = messageSequence;
+            this.vMmultiSegmentMessageReferenceNumber = multiSegmentMessageReferenceNumber;
+            this.vTotalSegments = totalSegments;
+            this.vSegmentSequenceNumber = segmentSequenceNumber;
         }
 
         public Udh(int segmentid, int messageCount)
         {
-            vSegmentId = segmentid;
-            vMessageCount = messageCount;
+            this.vMmultiSegmentMessageReferenceNumber = segmentid;
+            this.vTotalSegments = messageCount;
         }
         #endregion
 
         #region Properties
-        public int SegmentID
+        public int MmultiSegmentMessageReferenceNumber
         {
-            get { return vSegmentId; }
+            get { return this.vMmultiSegmentMessageReferenceNumber; }
         }
 
-        public int MessageCount
+        public int TotalSegments
         {
-            get { return vMessageCount; }
-            set { vMessageCount = value; }
+            get { return this.vTotalSegments; }
+            set { this.vTotalSegments = value; }
         }
 
-        public int MessageSequence
+        public int SegmentSequenceNumber
         {
-            get { return vMessageSequence; }
-            set { vMessageSequence = value; }
+            get { return this.vSegmentSequenceNumber; }
+            set { this.vSegmentSequenceNumber = value; }
         }
         #endregion
 
@@ -99,7 +98,7 @@ namespace JamaaTech.Smpp.Net.Lib
             }
             else if (length == 6 && iei == 8 && ieidl == 4) //16 bits message reference
             {
-                segId = SMPPEncodingUtil.GetShortFromBytes(buffer.Remove(2));
+                segId = SmppEncodingUtil.GetShortFromBytes(buffer.Remove(2));
                 count = buffer.Remove();
                 seq = buffer.Remove();
             }
@@ -114,9 +113,9 @@ namespace JamaaTech.Smpp.Net.Lib
             buffer.Append(0x05); //User 8 bits reference number
             buffer.Append(0x00); //IEI = 0 concatenated message
             buffer.Append(0x03); //Three bytes follow
-            buffer.Append((byte)vSegmentId);
-            buffer.Append((byte)vMessageCount);
-            buffer.Append((byte)vMessageSequence);
+            buffer.Append((byte)this.vMmultiSegmentMessageReferenceNumber);
+            buffer.Append((byte)this.vTotalSegments);
+            buffer.Append((byte)this.vSegmentSequenceNumber);
             return buffer.ToBytes();
         }
 

@@ -1,17 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{1578A5AA-1DC1-42C6-AFF5-0EB278960881}</ProjectGuid>
+    <ProjectGuid>{BD240801-5196-4B32-AA9F-1A16AC458270}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Smpp.Net.Client</RootNamespace>
-    <AssemblyName>JamaaTech.Smpp.Net.Client.v1.4</AssemblyName>
+    <RootNamespace>JamaaTech.Smpp.Net.Portable</RootNamespace>
+    <AssemblyName>JamaaTech.Smpp.Net.Portable.v1.4</AssemblyName>
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,7 +34,7 @@
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyOriginatorKeyFile>Jamaa Smpp Client.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>Jamaa Smpp Portable.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -42,37 +42,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ConnectionStateChangedEventArgs.cs" />
-    <Compile Include="IShortMessage.cs" />
-    <Compile Include="ISmppClient.cs" />
-    <Compile Include="MessageEventArgs.cs" />
-    <Compile Include="MessageFactory.cs" />
+    <Compile Include="ByteBuffer.cs" />
+    <Compile Include="DataCoding.cs" />
+    <Compile Include="Latin1Encoding.cs" />
+    <Compile Include="MessageState.cs" />
+    <Compile Include="SmppEncodingUtil.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RecievedShortMessage.cs" />
-    <Compile Include="SendMessageCallBack.cs" />
-    <Compile Include="ShortMessage.cs" />
-    <Compile Include="SmppClient.cs" />
-    <Compile Include="SmppClientException.cs" />
-    <Compile Include="SmppConnectionProperties.cs" />
-    <Compile Include="SmppConnectionState.cs" />
-    <Compile Include="StateChangedEventArgs.cs" />
-    <Compile Include="TextMessage.cs" />
+    <Compile Include="SmppErrorCode.cs" />
+    <Compile Include="SmppException.cs" />
+    <Compile Include="SmscDefaultEncoding.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="License.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\JamaaTech.SMPP.Net.Lib\Smpp.Net.Lib.csproj">
-      <Project>{181F2022-E0DD-415E-BBBA-7C5E0303AAF8}</Project>
-      <Name>Smpp.Net.Lib</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\JamaaTech.SMPP.Net.Portable\Smpp.Net.Portable\Smpp.Net.Portable.csproj">
-      <Project>{bd240801-5196-4b32-aa9f-1a16ac458270}</Project>
-      <Name>Smpp.Net.Portable</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Jamaa Smpp Client.snk" />
+    <None Include="Jamaa Smpp Portable.pfx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
