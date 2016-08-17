@@ -128,13 +128,33 @@ namespace JamaaTech.Smpp.Net.Client
                 throw new SmppClientException("Sending message operation failed because the SmppClient is not connected");
             }
 
-            var sm = new SubmitSm();
+            SubmitSm sm = null;
+            var buffer = new ByteBuffer();
+
+            // For multi-part messages add Udh to each packet
+            if (message.TotalSegments > 1)
+            {
+                var header = new PDUHeader(CommandType.SubmitSm, (uint)message.SegmentSequenceNumber);
+                var udh = new Udh(message.MultiSegmentMessageReferenceNumber, message.TotalSegments, message.SegmentSequenceNumber);  
+              
+                buffer.Append(udh.GetBytes());                
+
+                sm = new SubmitSm(header);
+                sm.EsmClass = sm.EsmClass | EsmClass.UdhiIndicator;
+            }
+
+            if (sm == null)
+            {
+                sm = new SubmitSm();
+            }
+            
             sm.SourceAddress.Address = message.SourceAddress;
             sm.DestinationAddress.Address = message.DestinationAddress;
             sm.RegisteredDelivery = message.RegisterDeliveryNotification ? RegisteredDelivery.DeliveryReceipt : RegisteredDelivery.None;
             sm.DataCoding = message.DataCoding;
-            sm.SetMessageBytes(SmppEncodingUtil.GetBytesFromString(message.Text, sm.DataCoding));
 
+            buffer.Append(SmppEncodingUtil.GetBytesFromString(message.Text, message.DataCoding));
+            sm.SetMessageBytes(buffer.ToBytes());
 
             var response = this.transieverSession.SendPdu(sm, timeOut);
             if (response.Header.ErrorCode != SmppErrorCode.ESME_ROK)
